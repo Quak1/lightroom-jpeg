@@ -52,8 +52,8 @@ File id global, filename, filesize, filetime
 ## TODO
 
 - Handle 3 cases:
-  - RAW
-  - RAW + JPEG
-  - JPEG
-- Require start date
-- If no end date is provided use today
+  - [ ] RAW
+  - [ ] RAW + JPEG
+  - [ ] JPEG
+- [x] Require start date
+- [x] If no end date is provided use today
