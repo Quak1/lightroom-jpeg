@@ -8,10 +8,12 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/ncruces/go-sqlite3/driver"
+	_ "github.com/ncruces/go-sqlite3/embed"
 )
 
 type config struct {
@@ -35,19 +37,22 @@ type adobeImage struct {
 func main() {
 	cfg, err := parseFlags()
 	if err != nil {
-		log.Fatal(err)
+		log.Println("Error:", err)
+		return
 	}
 
 	dsn := "file:" + cfg.CatalogPath + "?mode=ro"
 	db, err := sql.Open("sqlite3", dsn)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("Error:", err)
+		return
 	}
 	defer db.Close()
 
 	err = db.Ping()
 	if err != nil {
-		log.Fatal(err)
+		log.Println("Error:", err)
+		return
 	}
 
 	query := `
@@ -70,26 +75,31 @@ ORDER BY id;
 	endDate := cfg.EndDate.Format(time.DateOnly)
 	query = fmt.Sprintf(query, startDate, endDate, cfg.Pick, cfg.Rating)
 
-	// fmt.Println(query)
-
 	rows, err := db.Query(query)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("Error:", err)
+		return
 	}
 
 	var img adobeImage
 	for rows.Next() {
 		rows.Scan(&img.id, &img.path, &img.filename, &img.format, &img.sidecarExtension)
+		img.path = filepath.FromSlash(img.path)
 
 		if img.format == "RAW" && img.sidecarExtension == "" {
-			fmt.Printf("Error: file '%s' doesn't have a sidecar image. Skipping.\n", img.path)
+			log.Printf("Error: file '%s' doesn't have a sidecar image. Skipping.\n", img.path)
 		} else {
 			newFilename := replaceExtension(img.filename, img.sidecarExtension)
-			src := img.path + newFilename
-			dst := cfg.DestinationPath + newFilename
+			src := filepath.Join(img.path, newFilename)
+			dst := filepath.Join(cfg.DestinationPath, newFilename)
+
 			fmt.Printf("%d: Copying '%s' into '%s'\n", img.id, src, dst)
+
 			if cfg.Copy {
-				copyFile(src, dst)
+				err = copyFile(src, dst)
+				if err != nil {
+					log.Println(err)
+				}
 			}
 		}
 	}
@@ -110,17 +120,27 @@ func copyFile(src, dst string) error {
 		return fmt.Errorf("%s is not a regular file", src)
 	}
 
-	dstFile, err := os.OpenFile(dst, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0644)
+	dstDir := filepath.Dir(dst)
+	if err := os.MkdirAll(dstDir, 0755); err != nil {
+		return err
+	}
+
+	dstFile, err := os.OpenFile(dst, os.O_RDWR|os.O_CREATE|os.O_EXCL, srcInfo.Mode())
 	if err != nil {
 		if errors.Is(err, os.ErrExist) {
-			return fmt.Errorf("File '%s' already exists.", dst)
+			return fmt.Errorf("Error: file '%s' already exists.", dst)
 		}
 		return err
 	}
 	defer dstFile.Close()
 
-	_, err = io.Copy(dstFile, srcFile)
-	return err
+	if _, err = io.Copy(dstFile, srcFile); err != nil {
+		dstFile.Close()
+		os.Remove(dst)
+		return err
+	}
+
+	return dstFile.Sync()
 }
 
 func replaceExtension(path, ext string) string {
@@ -135,9 +155,9 @@ func replaceExtension(path, ext string) string {
 func parseFlags() (*config, error) {
 	var cfg config
 	flag.StringVar(&cfg.CatalogPath, "catalog", "", "Lightroom catalog path")
-	flag.StringVar(&cfg.CatalogPath, "destination", "", "Destination path")
+	flag.StringVar(&cfg.DestinationPath, "destination", "", "Destination path")
 	startDateStr := flag.String("date", "", "Start date. Format: YYYY-MM-DD")
-	endDateStr := flag.String("end_date", "", "End date. Format: YYYY-MM-DD")
+	endDateStr := flag.String("date_end", "", "End date. Format: YYYY-MM-DD")
 	pick := flag.Bool("pick", true, "Should pictures be picked or not")
 	flag.IntVar(&cfg.Rating, "rating", 0, "Min rating")
 	flag.BoolVar(&cfg.Copy, "copy", false, "Copy files")
@@ -147,7 +167,7 @@ func parseFlags() (*config, error) {
 		return nil, fmt.Errorf("'catalog' path is required.")
 	}
 	if cfg.DestinationPath == "" {
-		cfg.DestinationPath = "./"
+		cfg.DestinationPath = "."
 	}
 	if *startDateStr == "" {
 		return nil, fmt.Errorf("'date' is required.")
