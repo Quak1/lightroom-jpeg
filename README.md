@@ -1,5 +1,44 @@
 # lr-exporter
 
+Small CLI tool that queries a Lightroom Classic catalog (`.lrcat`) and copies selected images.
+
+- Filter images by:
+  - Capture date
+  - Pick flag
+  - Minimum rating
+- Fetches original image paths from catalog
+- Handles RAW + JPG and JPG only workflows
+
+## Usage
+
+### Notes
+
+- Lightroom must be close when running this tool
+- Destination files are not overwritten
+- Folder structure is not preserved
+
+```bash
+./lr-exporter \
+  -catalog /path/to/catalog.lrcat \
+  -destination ./export \
+  -date 2024-01-01 \
+  -date_end 2024-01-07 \
+  -rating 3 \
+  -pick=true \
+```
+
+### Flags
+
+| Flag           | Description                     | Default         |
+| -------------- | ------------------------------- | --------------- |
+| `-catalog`     | Path to Lightroom `.lrcat` file |                 |
+| `-destination` | Output directory                | `.`             |
+| `-date`        | Start date (`YYYY-MM-DD`)       |                 |
+| `-date_end`    | End date (`YYYY-MM-DD`)         |                 |
+| `-pick`        | Only include picked images      | `true`          |
+| `-rating`      | Minimum rating                  | `0`             |
+| `-dry-run`     | Perform a dry run               | `false`         |
+
 ## DB Tables
 
 ### Adobe_images
@@ -38,22 +77,3 @@ Root folder ids to absolute path
 
 - id_local | `8692`
 - absolutePath | `Z:/photos/`
-
-### AgParsedImportHash
-
-File id global, filename, filesize, filetime
-
-## DB Relations
-
-- Adobe_images.rootFile = AgLibraryFile.id_local
-- AgLibraryFile.folder = AgLibraryFolder.id_local
-- AgLibraryFolder.rootFolder = AgLibraryRootFolder.id_local
-
-## TODO
-
-- Handle 3 cases:
-  - [ ] RAW
-  - [ ] RAW + JPEG
-  - [ ] JPEG
-- [x] Require start date
-- [x] If no end date is provided use today

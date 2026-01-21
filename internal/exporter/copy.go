@@ -32,7 +32,7 @@ func copyFile(src, dst string) error {
 	dstFile, err := os.OpenFile(dst, os.O_CREATE|os.O_EXCL|os.O_WRONLY, srcInfo.Mode())
 	if err != nil {
 		if errors.Is(err, os.ErrExist) {
-			return fmt.Errorf("Error: file '%s' already exists.", dst)
+			return fmt.Errorf("file '%s' already exists", dst)
 		}
 		return err
 	}

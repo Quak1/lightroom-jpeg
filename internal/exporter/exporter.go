@@ -30,7 +30,7 @@ func Run(cfg *Config) error {
 		}
 
 		if img.format == "RAW" && img.sidecarExtension == "" {
-			fmt.Printf("%s doesn't have a sidecar image. Skipping.\n", img.filename)
+			fmt.Printf("%s doesn't have a sidecar image, skipping\n", img.filename)
 			continue
 		}
 
