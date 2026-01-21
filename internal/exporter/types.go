@@ -9,7 +9,7 @@ type Config struct {
 	EndDate         time.Time
 	Pick            int
 	Rating          int
-	Copy            bool
+	DryRun          bool
 }
 
 type Image struct {

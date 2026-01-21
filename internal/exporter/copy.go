@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func copyFile(src, dst string) error {
@@ -43,4 +44,23 @@ func copyFile(src, dst string) error {
 	}
 
 	return dstFile.Sync()
+}
+
+func buildPaths(img *Image, cfg *Config) (src, dst string) {
+	newFilename := img.filename
+	if img.format == "RAW" {
+		newFilename = replaceExtension(img.filename, img.sidecarExtension)
+	}
+
+	src = filepath.Join(img.path, newFilename)
+	dst = filepath.Join(cfg.DestinationPath, newFilename)
+	return src, dst
+}
+
+func replaceExtension(path, ext string) string {
+	idx := strings.LastIndex(path, ".")
+	if idx == -1 {
+		return path + "." + ext
+	}
+	return path[:idx] + "." + ext
 }

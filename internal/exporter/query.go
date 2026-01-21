@@ -2,6 +2,7 @@ package exporter
 
 import (
 	"database/sql"
+	"path/filepath"
 	"time"
 )
 
@@ -32,4 +33,11 @@ ORDER BY imgs.id_local;
 		cfg.Pick,
 		cfg.Rating,
 	)
+}
+
+func scanImage(rows *sql.Rows) (*Image, error) {
+	var img Image
+	err := rows.Scan(&img.id, &img.path, &img.filename, &img.format, &img.sidecarExtension)
+	img.path = filepath.FromSlash(img.path)
+	return &img, err
 }

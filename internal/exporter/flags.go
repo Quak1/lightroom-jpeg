@@ -15,7 +15,7 @@ func ParseFlags() (*Config, error) {
 	endDateStr := flag.String("date_end", "", "End date: YYYY-MM-DD")
 	pick := flag.Bool("pick", true, "Picked images only")
 	flag.IntVar(&cfg.Rating, "rating", 0, "Minimum rating")
-	flag.BoolVar(&cfg.Copy, "copy", false, "Copy files")
+	flag.BoolVar(&cfg.DryRun, "dry-run", false, "Dry run")
 	flag.Parse()
 
 	if cfg.CatalogPath == "" || *startDateStr == "" {
